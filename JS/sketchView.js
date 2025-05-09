@@ -148,6 +148,7 @@ export default class SketchView {
                     isDrawing = false;
                     this.onSketchEdit(); // add values later
                 }
+                
             });
         });
 
