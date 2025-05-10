@@ -4,7 +4,7 @@ export default class SketchView {
         this.onSketchSelect = onSketchSelect;
         this.onSketchAdd = onSketchAdd;
         this.onSketchEdit = onSketchEdit;
-        this.onSketchDelete = onSketchDelete
+        this.onSketchDelete = onSketchDelete;
 
         this.root.innerHTML = `
             <div class="sketchApp">
@@ -18,24 +18,24 @@ export default class SketchView {
                     <div class="canvasCreator">
                         <label for="resolution">Select Resolution:</label>
                         <select id="resolution">
-                            <option value="256x144">256x144</option>
-                            <option value="640x480">640x480</option>
-                            <option value="800x600">800x600</option>
-                            <option value="1024x768">1024x768</option>
-                            <option value="1920x1080">1920x1080</option>
+                            <option value="160x90">160x90</option>
+                            <option value="320x180">320x180</option>
+                            <option value="426x240">426x240</option>
                             <option value="custom">Custom</option>
                         </select>
                         <div id="customResolutionInputs" style="display: none;">
                             <label for="customWidth">Width:</label>
-                            <input type="number" id="customWidth" min="1" placeholder="Width">
+                            <input type="number" id="customWidth" min="1" max="426" placeholder="Width">
                             <label for="customHeight">Height:</label>
-                            <input type="number" id="customHeight" min="1" placeholder="Height">
+                            <input type="number" id="customHeight" min="1" max="240" placeholder="Height">
                         </div>
                         <button id="createCanvas">Create Canvas</button>
                     </div>
+                    <div class="canvasContainer"></div>
                 </div>
             </div>
         `;
+
         this._initEventListeners();
     }
 
@@ -58,8 +58,8 @@ export default class SketchView {
             if (resolutionSelect.value === "custom") {
                 width = parseInt(this.root.querySelector("#customWidth").value);
                 height = parseInt(this.root.querySelector("#customHeight").value);
-                if (!width || !height || width <= 0 || height <= 0) {
-                    alert("Please enter valid width and height.");
+                if (!width || !height || width <= 0 || height <= 0 || width > 426 || height > 240) {
+                    alert("Please enter valid width (1-426) and height (1-240).");
                     return;
                 }
             } else {
@@ -84,30 +84,31 @@ export default class SketchView {
     }
 
     _createPixelCanvas(width, height) {
-        const canvasArea = this.root.querySelector(".canvasArea");
-        canvasArea.innerHTML = `
+        const canvasContainer = this.root.querySelector(".canvasContainer");
+        canvasContainer.innerHTML = `
             <div class="drawingModes">
+                <input id="sketchTitleInput" type="text" placeholder="Enter sketch title" />
                 <select id="modeSelect">
                     <option value="draw">Draw</option>
                     <option value="erase">Erase</option>
                     <option value="fill">Fill</option>
                 </select>
-                <select id="colourSelect">
-                    <option value="red">Red</option>
-                    <option value="blue">Blue</option>
-                    <option value="green">Green</option>
-                    <option value="black">Black</option>
-                    <option value="yellow">Yellow</option>
-                    <option value="orange">Orange</option>
-                    <option value="purple">Purple</option>
-                </select>
+                <div id="colourPicker" class="colourPicker">
+                    <span class="colourSwatch" data-color="red" style="background-color: red;"></span>
+                    <span class="colourSwatch" data-color="blue" style="background-color: blue;"></span>
+                    <span class="colourSwatch" data-color="green" style="background-color: green;"></span>
+                    <span class="colourSwatch" data-color="black" style="background-color: black;"></span>
+                    <span class="colourSwatch" data-color="yellow" style="background-color: yellow;"></span>
+                    <span class="colourSwatch" data-color="orange" style="background-color: orange;"></span>
+                    <span class="colourSwatch" data-color="purple" style="background-color: purple;"></span>
+                </div>
                 <button id="clearCanvas">Clear</button>
                 <button id="saveSketch">Download Sketch</button>
             </div>
             <div class="pixelCanvas" style="grid-template-columns: repeat(${width}, 1fr); grid-template-rows: repeat(${height}, 1fr);"></div>
         `;
 
-        const pixelCanvas = canvasArea.querySelector(".pixelCanvas");
+        const pixelCanvas = canvasContainer.querySelector(".pixelCanvas");
         for (let i = 0; i < width * height; i++) {
             const pixel = document.createElement("div");
             pixel.classList.add("pixel");
@@ -117,88 +118,130 @@ export default class SketchView {
         this._initCanvasEvents(width, height);
     }
 
-    _initCanvasEvents(width , height) {
+    _initCanvasEvents(width, height) {
         const modeSelect = this.root.querySelector("#modeSelect");
-        const colourSelect = this.root.querySelector("#colourSelect");
+        const colourPicker = this.root.querySelector("#colourPicker");
         const clearBtn = this.root.querySelector("#clearCanvas");
         const saveBtn = this.root.querySelector("#saveSketch");
+        const titleInput = this.root.querySelector("#sketchTitleInput");
+        const pixelCanvas = this.root.querySelector(".pixelCanvas");
         const pixels = this.root.querySelectorAll(".pixel");
 
         let isDrawing = false;
+        let selectedColor = "black"; // Default color
+
+        const swatches = colourPicker.querySelectorAll(".colourSwatch");
+        swatches.forEach(swatch => {
+            swatch.addEventListener("click", () => {
+                swatches.forEach(s => s.classList.remove("selected"));
+                swatch.classList.add("selected");
+                selectedColor = swatch.getAttribute("data-color");
+            });
+        });
+        // Set default selected swatch
+        colourPicker.querySelector(".colourSwatch[data-color='black']").classList.add("selected");
+
+        // Title input listener
+        titleInput.addEventListener("blur", () => {
+            const title = titleInput.value.trim() || "Untitled Sketch";
+            this.onSketchEdit(this._getPixelData(pixels), width, height, title);
+        });
 
         pixels.forEach(pixel => {
-            pixel.addEventListener('mousedown' , () => {
+            pixel.addEventListener("mousedown", (event) => {
+                event.preventDefault();
                 isDrawing = true;
-                this._handlePixelInteract(pixel , modeSelect.value , colourSelect.value , pixels);
+                this._handlePixelInteract(pixel, modeSelect.value, selectedColor, pixels);
             });
+        });
 
-            pixel.addEventListener('mousemove' , () => {
-                if(isDrawing) {
-                    this._handlePixelInteract(pixel , modeSelect.value , colourSelect.value , pixels);
+        pixelCanvas.addEventListener("mousemove", (event) => {
+            if (isDrawing) {
+                const pixel = event.target.closest(".pixel");
+                if (pixel) {
+                    this._handlePixelInteract(pixel, modeSelect.value, selectedColor, pixels);
                 }
-            });
-            
-            pixel.addEventListener('mouseup' , () => {
+            }
+        });
+
+        document.addEventListener("mouseup", () => {
+            if (isDrawing) {
                 isDrawing = false;
-                this.onSketchEdit(); // add values later
-            })
-
-            pixel.addEventListener('mouseleave' , () => {
-                if (isDrawing) {
-                    isDrawing = false;
-                    this.onSketchEdit(); // add values later
-                }
-                
-            });
+                this.onSketchEdit(this._getPixelData(pixels), width, height, titleInput.value.trim() || "Untitled Sketch");
+            }
         });
 
-        clearBtn.addEventListener('click' , () => {
+        pixelCanvas.addEventListener("mouseleave", () => {
+            if (isDrawing) {
+                isDrawing = false;
+                this.onSketchEdit(this._getPixelData(pixels), width, height, titleInput.value.trim() || "Untitled Sketch");
+            }
+        });
+
+        clearBtn.addEventListener("click", () => {
             pixels.forEach(pixel => {
-                pixel.style.backgroundColor = 'white';
+                pixel.style.backgroundColor = "white";
             });
-            this.onSketchEdit(); // add values later
+            this.onSketchEdit(this._getPixelData(pixels), width, height, titleInput.value.trim() || "Untitled Sketch");
         });
 
-        //implement download sketch button later
+        saveBtn.addEventListener("click", () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            pixels.forEach((pixel, index) => {
+                const x = index % width;
+                const y = Math.floor(index / width);
+                ctx.fillStyle = pixel.style.backgroundColor || "white";
+                ctx.fillRect(x, y, 1, 1);
+            });
+            const link = document.createElement("a");
+            link.download = "sketch.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
     }
 
-    _handlePixelInteract(pixel , mode , color , pixels) {
-        if(mode === 'draw') {
+    _handlePixelInteract(pixel, mode, color, pixels) {
+        if (mode === "draw") {
             pixel.style.backgroundColor = color;
-        }
-        else if(mode === 'erase') {
-            pixel.style.backgroundColor = 'white';
-        }
-        else if(mode === 'fill') {
-            pixels.forEach(pixel => {pixel.style.backgroundColor = 'color'});
+        } else if (mode === "erase") {
+            pixel.style.backgroundColor = "white";
+        } else if (mode === "fill") {
+            pixels.forEach(pixel => {
+                pixel.style.backgroundColor = color;
+            });
         }
     }
 
-    _getPixelData(pixels){
-        return Array.from(pixels).map(pixel => pixel.style.backgroundColor || 'white');
+    _getPixelData(pixels) {
+        return Array.from(pixels).map(pixel => pixel.style.backgroundColor || "white");
     }
 
     updateSketchList(sketches) {
-        const sketchList = this.root.querySelector('.sketchList');
-        sketchList.innerHTML = '';
-        for(const sketch of sketches) {
-            const html = this._createListItemHTML(sketch.id , sketch.title , new Date(sketch.updated))
-            sketchList.insertAdjacentHTML('beforeend' , html);
+        const sketchList = this.root.querySelector(".sketchList");
+        sketchList.innerHTML = "";
+        for (const sketch of sketches) {
+            const html = this._createListItemHTML(sketch.id, sketch.title, new Date(sketch.updated));
+            sketchList.insertAdjacentHTML("beforeend", html);
         }
 
-        sketchList.querySelectorAll('.sketchItem').forEach(sketch => {
-            sketch.addEventListener('click' , () => {
-                this.onSketchSelect(sketch.getAttribute('data-id'))
+        sketchList.querySelectorAll(".sketchItem").forEach(sketch => {
+            sketch.addEventListener("click", () => {
+                this.onSketchSelect(sketch.getAttribute("data-id"));
             });
         });
     }
 
-    _createListItemHTML(id , title , updated) {
-        return `<div class='sketchItem' data-id='${id}'>
-        <div class='sketchTitle'>${title}</div>
-        <div class="sketchUpdated">${updated.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}</div>
+    _createListItemHTML(id, title, updated) {
+        return `
+            <div class="sketchItem" data-id="${id}">
+                <div class="sketchTitle">${title}</div>
+                <div class="sketchUpdated">${updated.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}</div>
                 <button class="deleteSketch">Delete</button>
-            </div>`;
+            </div>
+        `;
     }
 
     updateActiveSketch(sketch) {
@@ -209,10 +252,12 @@ export default class SketchView {
             }
         });
 
-        this._createPixelCanvas(sketch.width , sketch.height)
-        const pixels = this.root.querySelectorAll('.pixel');
-        sketch.pixels.forEach((color , index) => {
-            pixels[index].style.backgroundColor = color
+        this._createPixelCanvas(sketch.width, sketch.height);
+        const pixels = this.root.querySelectorAll(".pixel");
+        const titleInput = this.root.querySelector("#sketchTitleInput");
+        titleInput.value = sketch.title || "Untitled Sketch";
+        sketch.pixels.forEach((color, index) => {
+            pixels[index].style.backgroundColor = color;
         });
     }
 

@@ -113,9 +113,11 @@ body {
 .canvasArea {
     flex-grow: 1;
     padding: 2.5%;
-    overflow: hidden;
+    overflow: auto;
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 .canvasCreator {
@@ -124,7 +126,14 @@ body {
     margin-bottom: 20px;
 }
 
-#resolution, #modeSelect, #colourSelect {
+.canvasContainer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#resolution, #modeSelect {
     padding: 5px;
     border-radius: 5px;
     font-family: 'Montserrat', sans-serif;
@@ -160,22 +169,50 @@ body {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+}
+
+#sketchTitleInput {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    width: 200px;
+}
+
+.colourPicker {
+    display: flex;
+    gap: 5px;
+}
+
+.colourSwatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border 0.2s ease;
+}
+
+.colourSwatch.selected {
+    border: 2px solid #333;
 }
 
 .pixelCanvas {
     display: grid;
     border: 1px solid #ccc;
-    width: 100%;
-    max-width: 800px;
-    aspect-ratio: 16/9;
-    overflow: hidden;
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
 }
 
 .pixel {
-    border: 0.5px solid #ddd;
     background-color: #fff;
     cursor: pointer;
-    width: 100%;
+    min-width: 4px;
     aspect-ratio: 1/1;
     box-sizing: border-box;
     transition: background-color 0.1s ease;
@@ -224,6 +261,7 @@ body {
         max-width: 250px;
     }
     .pixelCanvas {
+        width: 100%;
         max-width: 100%;
     }
 }
