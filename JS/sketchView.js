@@ -5,6 +5,8 @@ export default class SketchView {
         this.onSketchAdd = onSketchAdd;
         this.onSketchEdit = onSketchEdit;
         this.onSketchDelete = onSketchDelete;
+        this.mode = "draw"; // Default mode
+        this.selectedColor = "black"; // Default color
 
         this.root.innerHTML = `
             <div class="sketchApp">
@@ -18,9 +20,22 @@ export default class SketchView {
                     <div class="canvasCreator">
                         <label for="resolution">Select Resolution:</label>
                         <select id="resolution">
-                            <option value="160x90">160x90</option>
-                            <option value="320x180">320x180</option>
-                            <option value="426x240">426x240</option>
+                            <option value="16x9">16x9</option>
+                            <option value="32x18">32x18</option>
+                            <option value="48x27">48x27</option>
+                            <option value="64x36">64x36</option>
+                            <option value="80x45">80x45</option>
+                            <option value="96x54">96x54</option>
+                            <option value="112x63">112x63</option>
+                            <option value="128x72">128x72</option>
+                            <option value="144x81">144x81</option>
+                            <option value="160x90" selected>160x90</option>
+                            <option value="176x99">176x99</option>
+                            <option value="192x108">192x108</option>
+                            <option value="208x117">208x117</option>
+                            <option value="224x126">224x126</option>
+                            <option value="240x135">240x135</option>
+                            <option value="256x144">256x144</option>
                             <option value="custom">Custom</option>
                         </select>
                         <div id="customResolutionInputs" style="display: none;">
@@ -45,6 +60,9 @@ export default class SketchView {
         const customInputs = this.root.querySelector("#customResolutionInputs");
         const createCanvasBtn = this.root.querySelector("#createCanvas");
 
+        // Hide custom inputs initially
+        customInputs.style.display = "none";
+
         btnAddSketch.addEventListener("click", () => {
             this.onSketchAdd();
         });
@@ -65,8 +83,10 @@ export default class SketchView {
             } else {
                 [width, height] = resolutionSelect.value.split("x").map(Number);
             }
+            // Create canvas and update active sketch
             this._createPixelCanvas(width, height);
-            this.onSketchAdd(width, height);
+            const pixels = Array(width * height).fill("white");
+            this.onSketchEdit(pixels, width, height, this.root.querySelector("#sketchTitleInput")?.value.trim() || "Untitled Sketch");
         });
 
         this.root.querySelector(".sketchList").addEventListener("click", (event) => {
@@ -85,13 +105,15 @@ export default class SketchView {
 
     _createPixelCanvas(width, height) {
         const canvasContainer = this.root.querySelector(".canvasContainer");
+        const canvasCreator = this.root.querySelector(".canvasCreator");
+            canvasCreator.style.display = "none";
         canvasContainer.innerHTML = `
             <div class="drawingModes">
                 <input id="sketchTitleInput" type="text" placeholder="Enter sketch title" />
                 <select id="modeSelect">
-                    <option value="draw">Draw</option>
-                    <option value="erase">Erase</option>
-                    <option value="fill">Fill</option>
+                    <option value="draw" ${this.mode === "draw" ? "selected" : ""}>Draw</option>
+                    <option value="erase" ${this.mode === "erase" ? "selected" : ""}>Erase</option>
+                    <option value="fill" ${this.mode === "fill" ? "selected" : ""}>Fill</option>
                 </select>
                 <div id="colourPicker" class="colourPicker">
                     <span class="colourSwatch" data-color="red" style="background-color: red;"></span>
@@ -128,18 +150,25 @@ export default class SketchView {
         const pixels = this.root.querySelectorAll(".pixel");
 
         let isDrawing = false;
-        let selectedColor = "black"; // Default color
 
+        // Initialize mode
+        modeSelect.value = this.mode;
+        modeSelect.addEventListener("change", () => {
+            this.mode = modeSelect.value;
+        });
+
+        // Initialize color picker
         const swatches = colourPicker.querySelectorAll(".colourSwatch");
         swatches.forEach(swatch => {
             swatch.addEventListener("click", () => {
                 swatches.forEach(s => s.classList.remove("selected"));
                 swatch.classList.add("selected");
-                selectedColor = swatch.getAttribute("data-color");
+                this.selectedColor = swatch.getAttribute("data-color");
             });
+            if (swatch.getAttribute("data-color") === this.selectedColor) {
+                swatch.classList.add("selected");
+            }
         });
-        // Set default selected swatch
-        colourPicker.querySelector(".colourSwatch[data-color='black']").classList.add("selected");
 
         // Title input listener
         titleInput.addEventListener("blur", () => {
@@ -151,7 +180,7 @@ export default class SketchView {
             pixel.addEventListener("mousedown", (event) => {
                 event.preventDefault();
                 isDrawing = true;
-                this._handlePixelInteract(pixel, modeSelect.value, selectedColor, pixels);
+                this._handlePixelInteract(pixel, this.mode, this.selectedColor, pixels);
             });
         });
 
@@ -159,7 +188,7 @@ export default class SketchView {
             if (isDrawing) {
                 const pixel = event.target.closest(".pixel");
                 if (pixel) {
-                    this._handlePixelInteract(pixel, modeSelect.value, selectedColor, pixels);
+                    this._handlePixelInteract(pixel, this.mode, this.selectedColor, pixels);
                 }
             }
         });
@@ -252,13 +281,23 @@ export default class SketchView {
             }
         });
 
-        this._createPixelCanvas(sketch.width, sketch.height);
-        const pixels = this.root.querySelectorAll(".pixel");
-        const titleInput = this.root.querySelector("#sketchTitleInput");
-        titleInput.value = sketch.title || "Untitled Sketch";
-        sketch.pixels.forEach((color, index) => {
-            pixels[index].style.backgroundColor = color;
-        });
+        const canvasCreator = this.root.querySelector(".canvasCreator");
+        const canvasContainer = this.root.querySelector(".canvasContainer");
+
+        // If sketch has no canvas (width/height = 0), show resolution menu
+        if (!sketch.width || !sketch.height) {
+            canvasCreator.style.display = "block";
+            canvasContainer.innerHTML = "";
+        } else {
+            // Otherwise, show the canvas
+            this._createPixelCanvas(sketch.width, sketch.height);
+            const pixels = this.root.querySelectorAll(".pixel");
+            const titleInput = this.root.querySelector("#sketchTitleInput");
+            titleInput.value = sketch.title || "Untitled Sketch";
+            sketch.pixels.forEach((color, index) => {
+                pixels[index].style.backgroundColor = color;
+            });
+        }
     }
 
     updateSketchPreviewVisibility(visible) {

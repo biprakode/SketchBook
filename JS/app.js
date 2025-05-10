@@ -39,12 +39,12 @@ export default class App {
                 }
             },
 
-            onSketchAdd: (width = 160, height = 90) => {
+            onSketchAdd: () => {
                 const newSketch = {
                     title: "Untitled Sketch",
-                    width: width,
-                    height: height,
-                    pixels: Array(height * width).fill("white"),
+                    width: 0, // Placeholder: no canvas yet
+                    height: 0,
+                    pixels: [],
                 };
                 SketchAPI.saveSketch(newSketch);
                 this._refreshSketches();
@@ -66,6 +66,11 @@ export default class App {
             },
 
             onSketchDelete: (sketchID) => {
+                console.log("onSketchDelete called with ID:", sketchID); // Debug
+                if (!this._refreshSketches) {
+                    console.error("this._refreshSketches is undefined in onSketchDelete");
+                    return;
+                }
                 SketchAPI.deleteSketch(sketchID);
                 this._refreshSketches();
             },

@@ -117,13 +117,16 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
 }
 
 .canvasCreator {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
+    width: 100%;
+    max-width: 1400px;
+    z-index: 10;
 }
 
 .canvasContainer {
@@ -150,6 +153,12 @@ body {
     border-radius: 5px;
 }
 
+.canvasCreator label[for="resolution"] {
+    font-size: 1.25rem;
+    color: antiquewhite;
+    padding-right: 1%;
+}
+
 #createCanvas {
     background-color: #3498db;
     color: white;
@@ -171,10 +180,13 @@ body {
     margin-bottom: 20px;
     align-items: center;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1400px;
 }
 
 #sketchTitleInput {
+    background-color: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    color:antiquewhite;
     padding: 8px;
     border-radius: 5px;
     border: 1px solid #ccc;
@@ -204,15 +216,16 @@ body {
 .pixelCanvas {
     display: grid;
     border: 1px solid #ccc;
-    width: 90%;
-    max-width: 1200px;
+    width: 95%;
+    max-width: 1400px;
+    min-height: 500px;
     margin: auto;
 }
 
 .pixel {
     background-color: #fff;
     cursor: pointer;
-    min-width: 4px;
+    min-width: 5px;
     aspect-ratio: 1/1;
     box-sizing: border-box;
     transition: background-color 0.1s ease;
@@ -263,5 +276,6 @@ body {
     .pixelCanvas {
         width: 100%;
         max-width: 100%;
+        min-height: 300px;
     }
 }
